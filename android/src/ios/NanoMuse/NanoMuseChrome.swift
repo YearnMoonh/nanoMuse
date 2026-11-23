@@ -96,14 +96,17 @@ struct NanoMuseRoundDisc: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            Circle()
-                .fill(NanoMuseTones.surface)
-                .overlay(Circle().strokeBorder(NanoMuseTones.hairline, lineWidth: scheme == .dark ? 1 : 0))
-                .shadow(color: .black.opacity(scheme == .dark ? 0 : 0.14), radius: 3, y: 1)
-                .overlay(
-                    Image(systemName: symbol)
-                        .font(.system(size: size * 0.41, weight: .medium))
-                        .foregroundStyle(Color.primary)
+            Image(systemName: symbol)
+                .font(.system(size: size * 0.41, weight: .medium))
+                .foregroundStyle(Color.primary)
+                .frame(width: size, height: size)
+                .nmLiquidGlass(
+                    in: Circle(),
+                    interactive: true,
+                    fallbackFill: NanoMuseTones.surface,
+                    fallbackMaterialOpacity: 0.72,
+                    fallbackBorder: scheme == .dark,
+                    fallbackShadow: true
                 )
             if badge {
                 Circle()
@@ -148,6 +151,8 @@ struct NanoMuseNamePill: View {
     // NanoMuseHeaderMetrics so the header's reserved height stays enough for them.
     @ScaledMetric(relativeTo: .subheadline) private var nameSize: CGFloat = 14
     @ScaledMetric(relativeTo: .caption) private var statusSize: CGFloat = 11.5
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 2) {
@@ -167,9 +172,15 @@ struct NanoMuseNamePill: View {
         .padding(.vertical, 4)
         .frame(maxWidth: 260)
         .fixedSize(horizontal: true, vertical: false)
-        .background(NanoMuseTones.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .shadow(color: .black.opacity(0.14), radius: 2, y: 1)
-        .animation(.easeInOut(duration: 0.2), value: status)
+        .nmLiquidGlass(
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            interactive: true,
+            fallbackFill: NanoMuseTones.surface,
+            fallbackMaterialOpacity: 0.72,
+            fallbackBorder: scheme == .dark,
+            fallbackShadow: true
+        )
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: status)
     }
 }
 

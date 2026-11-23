@@ -103,24 +103,31 @@ struct NanoMuseHeaderScrim: View {
     /// The list is scrolled up, away from the latest message.
     var scrolledUp: Bool
 
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var usesNativeGlass: Bool {
+        NanoMuseGlassSupport.isNativeAvailable && !reduceTransparency
+    }
+
     var body: some View {
         ZStack {
             LinearGradient(
                 stops: [
-                    .init(color: ChatColors.background.opacity(0.8), location: 0),
-                    .init(color: ChatColors.background.opacity(0.35), location: 0.55),
+                    .init(color: ChatColors.background.opacity(usesNativeGlass ? 0.42 : 0.8), location: 0),
+                    .init(color: ChatColors.background.opacity(usesNativeGlass ? 0.16 : 0.35), location: 0.55),
                     .init(color: ChatColors.background.opacity(0), location: 1),
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
             LinearGradient(
-                colors: [ChatColors.background, ChatColors.background.opacity(0)],
+                colors: [ChatColors.background.opacity(usesNativeGlass ? 0.32 : 1), ChatColors.background.opacity(0)],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .opacity(scrolledUp ? 1 : 0)
-            .animation(.easeInOut(duration: 0.25), value: scrolledUp)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: scrolledUp)
         }
         .contentShape(Rectangle())
         // A tap on the bare scrim ends here: the rows the list has under the header (nmTopOverlay)

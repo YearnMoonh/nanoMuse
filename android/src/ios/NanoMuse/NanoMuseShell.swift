@@ -1023,12 +1023,15 @@ struct NanoMuseBottomBar: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, Self.pillPadding)
-        .background {
-            Capsule().fill(.ultraThinMaterial)
-            Capsule().fill(NanoMuseTones.surface.opacity(0.55))
-        }
-        .overlay(Capsule().strokeBorder(NanoMuseTones.hairline, lineWidth: 1))
-        .animation(reduceMotion ? nil : Animation.spring(response: 0.35, dampingFraction: 0.8), value: selected)
+        .nmLiquidGlass(
+            in: Capsule(),
+            interactive: true,
+            fallbackFill: NanoMuseTones.surface,
+            fallbackMaterialOpacity: 0.55,
+            fallbackBorder: true,
+            fallbackShadow: false
+        )
+        .animation(reduceMotion ? nil : Animation.spring(response: 0.32, dampingFraction: 0.86), value: selected)
         .frame(maxWidth: NanoMuseColumn.pillWidth(for: sizeClass, otherwise: Self.maxWidth))
         .frame(maxWidth: .infinity)
         .padding(.horizontal, Self.inset)

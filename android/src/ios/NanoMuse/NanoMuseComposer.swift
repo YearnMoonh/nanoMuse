@@ -40,6 +40,7 @@ struct NanoMuseComposerPill<Field: View>: View {
 
     @State private var showAttachMenu = false
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let glyph: CGFloat = 40
     /// The send disc's diameter, the size the `arrow.up.circle.fill` glyph had.
@@ -53,6 +54,10 @@ struct NanoMuseComposerPill<Field: View>: View {
             field()
                 .padding(.vertical, max(4, (glyph - NanoMuseComposerWatch.fieldFloor) / 2))
             trailingButton
+                .animation(
+                    reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.88),
+                    value: trailingStateKey
+                )
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
@@ -103,6 +108,13 @@ struct NanoMuseComposerPill<Field: View>: View {
     }
 
     // MARK: Mic · send · stop
+
+    private var trailingStateKey: Int {
+        if isProcessing && canEnqueue { return 1 }
+        if isProcessing { return 2 }
+        if hasContent { return canSend ? 3 : 4 }
+        return 0
+    }
 
     /// A glyph on the ink disc: the send arrow, and the stop square while the agent answers.
     /// Enabled: the disc in the ink colour, the glyph in the canvas colour. Disabled (nothing

@@ -155,15 +155,23 @@ private struct NanoMuseComposerVignette: View {
     let composerHeight: CGFloat
     let bottomGap: CGFloat
 
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorScheme) private var scheme
+
     private static let spread: CGFloat = NanoMuseComposerHost.fadeHeight
     private static let cornerRadius: CGFloat = 26
     private static let horizontalInset: CGFloat = 16
     private static let maxContentWidth: CGFloat = 760
 
+    private var baseOpacity: Double {
+        guard NanoMuseGlassSupport.isNativeAvailable, !reduceTransparency else { return 1 }
+        return scheme == .dark ? 0.48 : 0.38
+    }
+
     var body: some View {
         Canvas { context, size in
             guard size.width > 0, size.height > 0, composerHeight > 0 else { return }
-            let bg = ChatColors.background
+            let bg = ChatColors.background.opacity(baseOpacity)
             let clear = bg.opacity(0)
             let spread = min(Self.spread, size.height)
             let barH = max(0, size.height - spread)
