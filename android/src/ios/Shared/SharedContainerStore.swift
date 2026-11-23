@@ -5,17 +5,24 @@ import Foundation
 enum SharedContainerStore {
     static let appGroupID = "group.io.github.nanomuse.app"
 
+    // nanoMuse: privately signed builds can use their own sandbox without the release app group.
+    static let appGroupContainerURL = FileManager.default.containerURL(
+        forSecurityApplicationGroupIdentifier: appGroupID
+    )
+    static let storageContainerURL = appGroupContainerURL ?? FileManager.default
+        .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("NanoMuse", isDirectory: true)
+
     private static let pendingShareKey = "pendingShare"
 
     static var sharedDefaults: UserDefaults? {
-        UserDefaults(suiteName: appGroupID)
+        guard appGroupContainerURL != nil else { return nil } // nanoMuse: sharing needs a common container.
+        return UserDefaults(suiteName: appGroupID)
     }
 
     /// Directory in the shared container for transferring attachment files.
     static var sharedFileDirectory: URL? {
-        FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: appGroupID)?
-            .appendingPathComponent("ShareExtension", isDirectory: true)
+        appGroupContainerURL?.appendingPathComponent("ShareExtension", isDirectory: true) // nanoMuse:
     }
 
     // MARK: - Write (called by Share Extension)
