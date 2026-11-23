@@ -407,10 +407,10 @@ struct MinisApp: App {
                     // Trace the resolved AppGroup paths so we can confirm the
                     // main app, FileProvider extension, and iSH bind mount all
                     // agree on which directory holds the user's shared files.
-                    Self.logFPSyncTracePaths()
-                    // Start watching shared/skills/memory subtrees so iSH writes
-                    // and FileBrowserView mutations propagate to the Files app.
-                    AppGroupChangeWatcher.shared.start()
+                    if SharedContainerStore.appGroupContainerURL != nil { // nanoMuse: Files integration needs the shared container.
+                        Self.logFPSyncTracePaths()
+                        AppGroupChangeWatcher.shared.start()
+                    }
                     // Activate security scopes for user-mounted external folders
                     // (e.g. Obsidian vault in iCloud Drive). Held for app lifetime.
                     MountedFoldersManager.shared.activateAll()
@@ -705,7 +705,7 @@ struct MinisApp: App {
         guard previous != current else { return }
         UserDefaults.standard.set(current, forKey: key)
 
-        guard let container = fm.containerURL(forSecurityApplicationGroupIdentifier: "group.io.github.nanomuse.app") else { return }
+        guard let container = SharedContainerStore.appGroupContainerURL else { return } // nanoMuse:
         let dir = container.appendingPathComponent("MinisConfig", isDirectory: true)
         try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         let url = dir.appendingPathComponent("fp-sync-trace.log")
@@ -747,6 +747,8 @@ struct MinisApp: App {
         // sidebar title render stale first. App.init() already pre-loads it; this
         // keeps the cache fresh after ensureExists() seeds a first-launch SOUL.md.
         SoulStore.refreshCache()
+
+        guard SharedContainerStore.appGroupContainerURL != nil else { return } // nanoMuse: local directory setup is complete.
 
         // Clean up stale directory created by a bug where workingSet identifier
         // was passed through as a subdirectory name.
@@ -896,6 +898,7 @@ struct MinisApp: App {
     }
 
     private static func signalFileProvider() {
+        guard SharedContainerStore.appGroupContainerURL != nil else { return } // nanoMuse:
         NSFileProviderManager(for: fileProviderDomain)?.signalEnumerator(for: .rootContainer) { error in
             if let error {
                 lifecycleLog.warning("[FileProvider] signal failed: \(error.localizedDescription)")
@@ -1044,7 +1047,7 @@ struct MinisApp: App {
         return n
     }
 
-    /// One-time migration: move files from old locations to App Group container.
+    /// One-time migration: move files from old locations to the active storage container.
     /// Handles three sources:
     /// 1. Library/MinisChat/shared/ → App Group MinisFileProvider/shared/
     /// 2. Library/MinisChat/memory/ → App Group MinisFileProvider/memory/
@@ -1053,9 +1056,7 @@ struct MinisApp: App {
     private static func migrateSharedDirToAppGroup() {
         let fm = FileManager.default
         let library = fm.urls(for: .libraryDirectory, in: .userDomainMask).first!
-        let container = fm.containerURL(forSecurityApplicationGroupIdentifier: "group.io.github.nanomuse.app")!
-
-        let migrations: [(source: URL, dest: URL, label: String)] = [
+        var migrations: [(source: URL, dest: URL, label: String)] = [
             // Legacy Library/MinisChat/shared → new shared
             (library.appendingPathComponent("MinisChat/shared", isDirectory: true),
              AIChatViewModel.minisSharedPersistentDir, "shared"),
@@ -1065,10 +1066,11 @@ struct MinisApp: App {
             // Legacy Library/MinisChat/skills → new skills
             (library.appendingPathComponent("MinisChat/skills", isDirectory: true),
              AIChatViewModel.minisSkillsPersistentDir, "skills"),
-            // Old App Group MinisShared → new shared
-            (container.appendingPathComponent("MinisShared", isDirectory: true),
-             AIChatViewModel.minisSharedPersistentDir, "MinisShared→shared"),
         ]
+        if let container = SharedContainerStore.appGroupContainerURL { // nanoMuse: migrate old shared files when accessible.
+            migrations.append((container.appendingPathComponent("MinisShared", isDirectory: true),
+                               AIChatViewModel.minisSharedPersistentDir, "MinisShared→shared"))
+        }
 
         for migration in migrations {
             guard fm.fileExists(atPath: migration.source.path) else { continue }
@@ -1094,8 +1096,8 @@ struct MinisApp: App {
     /// targets logged during MOUNT setup.
     private static func logFPSyncTracePaths() {
         let fm = FileManager.default
-        let groupID = "group.io.github.nanomuse.app"
-        let containerURL = fm.containerURL(forSecurityApplicationGroupIdentifier: groupID)
+        let groupID = SharedContainerStore.appGroupID // nanoMuse:
+        let containerURL = SharedContainerStore.appGroupContainerURL
         let containerPath = containerURL?.path ?? "<nil>"
         let resolvedContainer = containerURL?.resolvingSymlinksInPath().path ?? "<nil>"
         lifecycleLog.info("[FPSyncTrace] appGroup=\(groupID) container=\(containerPath) resolved=\(resolvedContainer)")
