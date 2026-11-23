@@ -96,11 +96,13 @@ jobs:
 
       - name: Build for a device, unsigned
         working-directory: android/src/ios
+        env:
+          BUILD_CONFIGURATION: ${{ github.event_name == 'workflow_dispatch' && 'Release' || 'Debug' }}
         run: |
           set -o pipefail
           mkdir -p build
           xcodebuild build \
-            -project Minis.xcodeproj -scheme Minis -configuration Debug \
+            -project Minis.xcodeproj -scheme Minis -configuration "$BUILD_CONFIGURATION" \
             -destination 'generic/platform=iOS' \
             -derivedDataPath build/DerivedData \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= DEVELOPMENT_TEAM= \
@@ -117,6 +119,32 @@ jobs:
             echo "::error::warnings in NanoMuse/ (see above)"
             exit 1
           fi
+
+      - name: Package unsigned IPA
+        if: github.event_name == 'workflow_dispatch'
+        working-directory: android/src/ios
+        run: |
+          set -euo pipefail
+          app="$PWD/build/DerivedData/Build/Products/Release-iphoneos/Minis.app"
+          executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Info.plist")
+          test -x "$app/$executable"
+          lipo -verify_arch arm64 "$app/$executable"
+          staging=$(mktemp -d "$RUNNER_TEMP/nanomuse-ipa.XXXXXX")
+          trap 'rm -rf "$staging"' EXIT
+          mkdir "$staging/Payload"
+          ditto "$app" "$staging/Payload/Minis.app"
+          ipa="$PWD/build/nanoMuse-Liquid-Glass-unsigned.ipa"
+          (cd "$staging" && zip -qry "$ipa" Payload)
+          unzip -tq "$ipa"
+
+      - name: Upload unsigned IPA
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nanoMuse-Liquid-Glass-unsigned
+          path: android/src/ios/build/nanoMuse-Liquid-Glass-unsigned.ipa
+          retention-days: 7
+          if-no-files-found: error
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
