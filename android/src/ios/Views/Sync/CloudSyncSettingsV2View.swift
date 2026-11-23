@@ -40,7 +40,8 @@ struct CloudSyncSettingsV2View: View {
                 )) {
                     Text("Enable iCloud Sync")
                 }
-                if !statusText.isEmpty {
+                .disabled(SharedContainerStore.appGroupContainerURL == nil) // nanoMuse: signing without the app group uses local storage.
+                if SharedContainerStore.appGroupContainerURL != nil, !statusText.isEmpty { // nanoMuse:
                     NavigationLink {
                         SyncMigrationDetailView()
                     } label: {
@@ -50,7 +51,9 @@ struct CloudSyncSettingsV2View: View {
                     }
                 }
             } footer: {
-                Text("Toggle takes effect on next app launch.")
+                Text(SharedContainerStore.appGroupContainerURL == nil
+                     ? LocalizedStringKey("iCloud is not available")
+                     : LocalizedStringKey("Toggle takes effect on next app launch.")) // nanoMuse:
                     .font(.caption)
             }
 
