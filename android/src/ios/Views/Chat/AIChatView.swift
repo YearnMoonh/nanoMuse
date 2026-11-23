@@ -2773,17 +2773,22 @@ struct AIChatView: View {
 
     /// Shared label style for the floating scroll buttons (up / down), matching
     /// the original scroll-to-bottom button look.
+    @ViewBuilder // nanoMuse: separate ink disc vs Liquid Glass walk-back button without double shadows
     private func scrollFloatingButtonLabel(_ systemName: String, ink: Bool = false) -> some View { // nanoMuse: `ink` draws the disc in NanoMuseTones.ink with the glyph in the canvas colour
-        Image(systemName: systemName)
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(ink ? AnyShapeStyle(NanoMuseTones.onInk) : AnyShapeStyle(HierarchicalShapeStyle.secondary)) // nanoMuse:
-            .frame(width: 36, height: 36)
-            .background { if ink { NanoMuseTones.ink.clipShape(Circle()) } else { ScrollToBottomBackground().clipShape(Circle()) } } // nanoMuse:
-            // Border + shadow give the near-opaque disc its edge on a white
-            // page — at 0.25/0.12 the button had no readable outline over
-            // plain reply text. [T-ios-scrollbtn-invisible-lightmode]
-            .overlay(Circle().stroke(Color.gray.opacity(ink ? 0 : 0.35), lineWidth: 0.5)) // nanoMuse: the ink disc needs no edge
-            .shadow(color: .black.opacity(0.18), radius: 5, y: 2)
+        if ink { // nanoMuse:
+            Image(systemName: systemName) // nanoMuse:
+                .font(.system(size: 14, weight: .semibold)) // nanoMuse:
+                .foregroundStyle(NanoMuseTones.onInk) // nanoMuse:
+                .frame(width: 36, height: 36) // nanoMuse:
+                .background(NanoMuseTones.ink, in: Circle()) // nanoMuse:
+                .shadow(color: .black.opacity(0.18), radius: 5, y: 2) // nanoMuse:
+        } else { // nanoMuse:
+            Image(systemName: systemName) // nanoMuse:
+                .font(.system(size: 14, weight: .semibold)) // nanoMuse:
+                .foregroundStyle(.primary) // nanoMuse:
+                .frame(width: 36, height: 36) // nanoMuse:
+                .nmLiquidGlass(in: Circle(), interactive: true, fallbackFill: Color(.systemBackground), fallbackMaterialOpacity: 0.88, fallbackBorder: true, fallbackShadow: true) // nanoMuse:
+        } // nanoMuse:
     }
 
     /// Background color for the scroll-to-bottom button.
@@ -4825,10 +4830,7 @@ private struct ComposerSurface: ViewModifier {
 
     func body(content: Content) -> some View {
         if pill { // nanoMuse:
-            content // nanoMuse:
-                .background(shape.fill(NanoMuseTones.bubble)) // nanoMuse:
-                .clipShape(shape) // nanoMuse:
-                .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2) // nanoMuse: soft shadow matching Android
+            content.modifier(NanoMuseComposerGlassSurface(shape: shape)) // nanoMuse: native Liquid Glass on iOS 26+ with Reduce Transparency and legacy fallback
         } else if #available(iOS 26.0, *) {
             content
                 .glassEffect(.regular, in: shape)
