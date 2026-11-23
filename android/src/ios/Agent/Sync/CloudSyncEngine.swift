@@ -453,7 +453,7 @@ final class CloudSyncEngine: ObservableObject {
     // MARK: - Start / Stop
 
     func start() async {
-        guard isEnabled else {
+        guard isEnabled, SharedContainerStore.appGroupContainerURL != nil else { // nanoMuse: skip CloudKit on local-storage builds.
             syncStatus = .disabled
             return
         }
